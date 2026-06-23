@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>StoryForge v3.3.1</title>
+
+  <style>
+    :root {
+      --bg-oscuro: #0d0d0f; --bg-tarjeta: #16161a; --bg-input: #1e1e24; --bg-hover: #25252b;
+      --borde: #2a2a30; --acento: #ff7a45; --acento-hover: #ff6a30; --texto: #ececec; --texto-secundario: #888888; --radio: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-oscuro); color: var(--texto); min-height: 100vh; padding: 16px; line-height: 1.5; }
+    
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--borde); flex-wrap: wrap; gap: 12px; }
+    .titulo-app { display: flex; align-items: center; gap: 8px; }
+    .logo { font-size: 24px; background: linear-gradient(135deg, #ff7a45, #ff3d3d); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+    header .version { font-size: 10px; color: var(--texto-secundario); background: var(--bg-tarjeta); padding: 3px 8px; border-radius: 20px; border: 1px solid var(--borde); margin-left: 4px; }
+    .menu-archivos { display: flex; gap: 8px; flex-wrap: wrap; }
+    .menu-archivos button, .menu-info button { padding: 8px 12px; background-color: var(--bg-tarjeta); font-size: 12px; }
+    .menu-archivos button:hover, .menu-info button:hover { background-color: var(--acento); color: #000; }
+
+    main { display: grid; grid-template-columns: 1fr 1.4fr; gap: 16px; height: calc(100vh - 120px); }
+    .panel { background-color: var(--bg-tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .panel-header h2 { font-size: 13px; font-weight: 600; color: var(--texto-secundario); text-transform: uppercase; letter-spacing: 1px; }
+
+    textarea { flex: 1; width: 100%; background-color: var(--bg-input); color: var(--texto); border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px; font-family: Georgia, "Times New Roman", serif; font-size: 16px; line-height: 1.7; resize: none; outline: none; transition: border-color 0.2s ease; }
+    textarea:focus { border-color: var(--acento); }
+    textarea::placeholder { color: var(--texto-secundario); font-style: italic; }
+    select { padding: 12px 16px; background-color: var(--bg-input); color: var(--texto); border: 1px solid var(--borde); border-radius: var(--radio); font-size: 14px; font-family: inherit; cursor: pointer; outline: none; }
+    
+    .controles-crear { display: flex; gap: 8px; }
+    .controles-crear select { flex: 1; }
+    .controles-crear button { flex: 2; }
+    
+    .controles-universo { display: flex; gap: 8px; align-items: center; }
+    .controles-universo select { flex: 1; padding: 10px 12px; font-size: 13px; }
+    .btn-universos { padding: 10px 12px; background: var(--bg-input); border: 1px solid var(--borde); border-radius: var(--radio); color: var(--texto); font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s ease; }
+    .btn-universos:hover { background: var(--acento); color: #000; border-color: var(--acento); }
+
+    button { padding: 12px 16px; background-color: var(--bg-input); color: var(--texto); border: 1px solid var(--borde); border-radius: var(--radio); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; }
+    button:hover { background-color: var(--acento); border-color: var(--acento); color: #000; transform: translateY(-1px); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; background-color: var(--bg-input); border-color: var(--borde); color: var(--texto); }
+    .btn-detener { background-color: #ff3d3d !important; border-color: #ff3d3d !important; color: #fff !important; animation: parpadeo 1.5s infinite; }
+
+    #resultado-ia { flex: 1; background-color: var(--bg-input); border: 1px solid var(--borde); border-radius: var(--radio); padding: 16px; overflow-y: auto; font-family: Georgia, serif; font-size: 16px; line-height: 1.8; color: var(--texto); }
+    .vacio { color: var(--texto-secundario); font-style: italic; text-align: center; padding: 40px 20px; }
+    .escribiendo-cursor::after { content: '▋'; color: var(--acento); animation: parpadeo 0.8s infinite; margin-left: 2px; }
+    @keyframes parpadeo { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+    .header-novela { display: flex; flex-direction: column; align-items: center; margin-bottom: 16px; }
+    #titulo-historia { font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 12px; color: var(--texto); border-bottom: 2px solid var(--borde); padding-bottom: 16px; display: none; width: 100%; }
+    .menu-info { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px; }
+
+    .estado-ia { background: var(--bg-tarjeta); border: 1px dashed var(--borde); padding: 10px; border-radius: 8px; font-size: 13px; color: var(--texto-secundario); margin-bottom: 16px; font-family: -apple-system, sans-serif; display: none; }
+    .estado-ia.visible { display: block; }
+    .estado-ia span { color: var(--acento); font-weight: bold; }
+
+    .capitulo { margin-bottom: 16px; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; }
+    .capitulo-header { display: flex; justify-content: space-between; align-items: center; background-color: var(--bg-tarjeta); padding: 12px; cursor: pointer; user-select: none; }
+    .capitulo-header-left { display: flex; align-items: center; gap: 8px; flex: 1; }
+    .toggle-icono { font-size: 12px; transition: transform 0.2s ease; color: var(--texto-secundario); }
+    .capitulo.minimizado .toggle-icono { transform: rotate(-90deg); }
+    .titulo-capitulo { font-size: 16px; font-weight: 600; color: var(--acento); font-family: -apple-system, sans-serif; }
+    .capitulo-acciones { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .contador-palabras { font-size: 11px; color: var(--texto-secundario); background-color: var(--bg-input); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--borde); font-family: -apple-system, sans-serif; }
+    .btn-icono-cap { padding: 6px 8px; font-size: 11px; background: var(--bg-input); border: 1px solid var(--borde); }
+    .btn-icono-cap:hover { background: var(--acento); color: #000; border-color: var(--acento); }
+    .btn-secreto { background: #2a2a35; border-color: #4a4a55; color: #a0a0b0; }
+    .btn-secreto:hover { background: #4a4a55; color: #fff; border-color: #6a6a75; }
+
+    .capitulo-body { padding: 16px; display: block; }
+    .capitulo.minimizado .capitulo-body { display: none; }
+    .parrafos-wrapper { white-space: pre-wrap; }
+    .parrafo-ia { margin-bottom: 16px; cursor: context-menu; padding: 8px; border-radius: 4px; transition: background-color 0.2s ease; -webkit-user-select: text; user-select: text; }
+    .parrafo-ia:hover { background-color: var(--bg-hover); }
+    .procesando { color: var(--acento); font-style: italic; }
+    
+    .footer-capitulo { margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--borde); display: flex; flex-direction: column; gap: 10px; }
+    .footer-capitulo label { font-size: 12px; color: var(--texto-secundario); font-family: -apple-system, sans-serif; text-transform: uppercase; letter-spacing: 1px; }
+    .footer-capitulo textarea { min-height: 60px; font-family: -apple-system, sans-serif; font-size: 14px; padding: 12px; resize: vertical; flex: none; }
+    .controles-continuar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .controles-continuar select { flex: 1; padding: 10px 12px; font-size: 13px; min-width: 150px; }
+    .btn-continuar-cap { padding: 10px 16px; font-size: 13px; }
+    .btn-reiniciar-cap { padding: 10px 12px; font-size: 12px; background: var(--bg-input); border: 1px dashed var(--texto-secundario); }
+    .btn-reiniciar-cap:hover { background: #ff3d3d; color: #fff; border-color: #ff3d3d; border-style: solid; }
+
+    #menu-contextual { position: fixed; display: none; background-color: var(--bg-tarjeta); border: 1px solid var(--borde); border-radius: 8px; padding: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 1000; flex-direction: column; gap: 4px; min-width: 200px; }
+    #menu-contextual button { width: 100%; justify-content: flex-start; border: none; background: transparent; padding: 12px; font-size: 14px; }
+    #menu-contextual button:hover { background-color: var(--acento); color: #000; }
+    .menu-separador { height: 1px; background: var(--borde); margin: 4px 0; }
+
+    #modal-fondo { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 10px; }
+    #modal-caja { background: var(--bg-tarjeta); border: 1px solid var(--borde); border-radius: 12px; max-width: 800px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 20px; position: relative; display: flex; flex-direction: column; }
+    #modal-titulo { font-size: 20px; color: var(--acento); margin-bottom: 16px; border-bottom: 1px solid var(--borde); padding-bottom: 10px; }
+    #modal-contenido { font-family: -apple-system, sans-serif; font-size: 14px; line-height: 1.6; white-space: pre-wrap; margin-bottom: 16px; display: none; }
+    #modal-acciones { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 10px; }
+    #modal-cerrar { position: absolute; top: 16px; right: 16px; background: var(--bg-input); border: 1px solid var(--borde); border-radius: 50%; width: 32px; height: 32px; padding: 0; cursor: pointer; }
+    #modal-cerrar:hover { background: #ff3d3d; color: #fff; }
+    .btn-modal { padding: 10px 16px; background: var(--bg-input); border: 1px solid var(--borde); color: var(--texto); border-radius: 8px; cursor: pointer; font-size: 14px; }
+    .btn-modal:hover { background: var(--acento); color: #000; border-color: var(--acento); }
+    .btn-modal-guardar { background: var(--acento); color: #000; font-weight: bold; }
+
+    .ficha-memoria { background: var(--bg-input); border: 1px solid var(--borde); border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+    .ficha-header { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--bg-tarjeta); cursor: pointer; user-select: none; }
+    .ficha-header-left { display: flex; align-items: center; gap: 8px; flex: 1; }
+    .ficha-toggle { font-size: 12px; transition: transform 0.2s ease; color: var(--texto-secundario); }
+    .ficha-memoria.minimizado .ficha-toggle { transform: rotate(-90deg); }
+    .ficha-titulo { font-weight: 600; color: var(--texto); font-size: 14px; font-family: -apple-system, sans-serif; }
+    .ficha-titulo-input { background: transparent; border: none; color: var(--texto); font-weight: 600; font-size: 14px; font-family: -apple-system, sans-serif; outline: none; width: 100%; border-bottom: 1px dashed transparent; min-width: 50px; }
+    .ficha-titulo-input:focus { border-bottom-color: var(--acento); color: var(--acento); }
+    .btn-activar-universo { padding: 6px 10px; font-size: 12px; background: var(--bg-input); border: 1px solid var(--borde); border-radius: 4px; cursor: pointer; color: var(--texto-secundario); margin-right: 8px; }
+    .btn-activar-universo:hover { background: #4a4a55; color: #fff; }
+    .btn-eliminar-ficha { background: transparent; border: none; color: #ff6a30; cursor: pointer; font-size: 16px; padding: 0 5px; }
+    .btn-eliminar-ficha:hover { color: #ff3d3d; transform: scale(1.2); }
+    .ficha-body { padding: 12px; display: block; }
+    .ficha-memoria.minimizado .ficha-body { display: none; }
+    .ficha-body textarea { width: 100%; min-height: 120px; background: var(--bg-oscuro); border: 1px solid var(--borde); color: var(--texto); padding: 12px; border-radius: 6px; font-family: -apple-system, sans-serif; font-size: 14px; line-height: 1.5; resize: vertical; }
+
+    #wiki-search { width: 100%; padding: 12px; margin-bottom: 16px; background: var(--bg-input); border: 1px solid var(--borde); border-radius: 8px; color: var(--texto); font-size: 15px; outline: none; }
+    #wiki-search:focus { border-color: var(--acento); }
+    .wiki-seccion { margin-bottom: 24px; }
+    .wiki-seccion h3 { color: var(--acento); font-size: 18px; margin-bottom: 10px; border-bottom: 1px solid var(--borde); padding-bottom: 5px; }
+    .wiki-item { background: var(--bg-input); padding: 12px; border-radius: 6px; margin-bottom: 10px; white-space: pre-wrap; font-family: -apple-system, sans-serif; font-size: 13px; line-height: 1.5; }
+    .wiki-item-mark { background: #ff7a4533; color: #ff9a65; padding: 0 2px; border-radius: 2px; }
+
+    @media (max-width: 768px) {
+      body { padding: 12px; }
+      header { flex-direction: column; align-items: stretch; gap: 12px; }
+      .titulo-app { justify-content: center; }
+      .menu-archivos { justify-content: center; }
+      main { grid-template-columns: 1fr; height: auto; gap: 16px; }
+      .panel { min-height: 300px; max-height: 80vh; }
+      .menu-info { gap: 6px; }
+      .menu-info button { padding: 8px 10px; font-size: 11px; flex: 1; }
+      .controles-continuar { flex-direction: column; align-items: stretch; }
+      .controles-continuar select, .controles-continuar button { width: 100%; }
+      .capitulo-acciones { gap: 4px; }
+      .capitulo-acciones button { padding: 6px 8px; font-size: 11px; }
+      #menu-contextual { min-width: 180px; }
+      #modal-caja { padding: 16px; }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="titulo-app">
+      <span class="logo">🔥</span>
+      <h1>StoryForge</h1>
+      <span class="version">v3.3.1</span>
+    </div>
+    <div class="menu-archivos">
+      <button onclick="nuevaNovela()">📄 Nueva</button>
+      <button onclick="document.getElementById('input-abrir').click()">📂 Abrir</button>
+      <input type="file" id="input-abrir" accept=".json" style="display:none" onchange="abrirNovela(event)">
+      <button onclick="guardarNovela()">💾 Guardar</button>
+      <button onclick="configurarIP()" style="background:var(--bg-input); border:1px solid var(--borde);">⚙️ IP IA</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="panel-header"><h2>✍️ La idea principal</h2></div>
+      <textarea id="texto-historia" placeholder="Escribe aquí la premisa de tu historia..."></textarea>
+      
+      <div class="controles-universo">
+        <select id="selector-universo" onchange="cambiarUniversoActivo(this.value)">
+          <option value="">Sin universo específico</option>
+        </select>
+        <button class="btn-universos" onclick="abrirModalGlobal('Universos')">🌌 Universos</button>
+      </div>
+
+      <div class="controles-crear">
+        <select id="longitud-inicial">
+          <option value="400">Corta (400)</option>
+          <option value="600" selected>Mediana (600)</option>
+          <option value="900">Larga (900)</option>
+          <option value="1200">Extensa (1200)</option>
+          <option value="1500">Épica (1500)</option>
+          <option value="2000">Ligera (2000)</option>
+          <option value="3000">Novela (3000)</option>
+        </select>
+        <button id="btn-crear" onclick="crearHistoria()"><span class="icono">✨</span> Crear Historia</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header"><h2>🤖 Tu Novela</h2></div>
+      <div id="resultado-ia">
+        <p class="vacio">Aún no hay historia.<br>Escribe una idea y pulsa <b>Crear Historia</b>. ✨</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="menu-contextual">
+    <button onclick="ejecutarAccionMenu('Expandir')"><span class="icono">⤢</span> Expandir párrafo</button>
+    <button onclick="ejecutarAccionMenu('Reescribir')"><span class="icono">↻</span> Reescribir párrafo...</button>
+    <div class="menu-separador"></div>
+    <button onclick="ejecutarAccionMenu('Corregir')"><span class="icono">📝</span> Corregir ortografía</button>
+    <button onclick="ejecutarAccionMenu('Tono')"><span class="icono">🎭</span> Cambiar tono...</button>
+    <button onclick="ejecutarAccionMenu('Dialogo')"><span class="icono">💬</span> Convertir en diálogo</button>
+    <button onclick="ejecutarAccionMenu('Incongruencia')"><span class="icono">🔍</span> Detectar incongruencia</button>
+  </div>
+
+  <div id="modal-fondo" onclick="if(event.target===this) cerrarModal()">
+    <div id="modal-caja">
+      <button id="modal-cerrar" onclick="cerrarModal()">✖</button>
+      <h2 id="modal-titulo"></h2>
+      <div id="modal-contenido"></div>
+      <div id="modal-cards"></div>
+      <div id="modal-acciones"></div>
+    </div>
+  </div>
+
+  <script>
+    let historiaCompleta = ""; 
+    let parrafoActivo = null;
+    let contadorCapitulos = 0;
+    let controladorAbortar = null; 
+
+    let fichasPersonajes = "Aún no hay personajes creados.";
+    let descripcionLugares = "Aún no hay lugares creados.";
+    let resumenesCapitulos = []; 
+    let cronologiaHistoria = "Aún no hay eventos cronológicos.";
+
+    let listaUniversos = []; 
+    let universoActivoNombre = ""; 
+
+    let OLLAMA_URL = localStorage.getItem('ollama_url') || 'http://localhost:11434';
+
+    function configurarIP() {
+      let ip = prompt("Introduce la IP de tu PC y el puerto (ej: http://192.168.1.100:11434).\n\nSi estás en el mismo PC, usa http://localhost:11434", OLLAMA_URL);
+      if (ip !== null) {
+        OLLAMA_URL = ip;
+        localStorage.setItem('ollama_url', ip);
+        alert("IP guardada. Recargando la página...");
+        location.reload();
+      }
+    }
+
+    function contarPalabras(texto) { return !texto || texto.trim() === '' ? 0 : texto.trim().split(/\s+/).length; }
+    function extraerSeccion(texto, tagInicio, tagFin) {
+      const regex = new RegExp(tagInicio.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "\\s*([\\s\\S]*?)\\s*" + tagFin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), "i");
+      const match = texto.match(regex);
+      return match ? match[1].trim() : "";
+    }
+
+    function obtenerDescripcionUniversoActivo() {
+      const univ = listaUniversos.find(u => u.nombre === universoActivoNombre);
+      return univ ? univ.descripcion : "";
+    }
+
+    async function solicitarIAStreaming(prompt, elementoDestino, contadorDOM) {
+      controladorAbortar = new AbortController(); 
+      try {
+        const respuesta = await fetch(`${OLLAMA_URL}/api/generate`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: "qwen3:8b", prompt: prompt, stream: true,
+            options: { temperature: 0.8, repeat_penalty: 1.18, repeat_last_n: 1000, top_p: 0.9, num_predict: 4096 }
+          }), signal: controladorAbortar.signal 
+        });
+
+        if (!respuesta.ok) throw new Error(`Error HTTP ${respuesta.status}. ¿Ollama está encendido?`);
+        if (!respuesta.body) throw new Error("No hay streaming. Revisa la conexión.");
+
+        const reader = respuesta.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '', textoCrudo = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lineas = buffer.split('\n'); buffer = lineas.pop();
+          for (const linea of lineas) {
+            if (linea.trim() === '') continue;
+            try {
+              const msg = JSON.parse(linea);
+              if (msg.response) {
+                textoCrudo += msg.response;
+                let limpio = textoCrudo.replace(/\*\*/g, '').replace(/\*/g, '').replace(/###/g, '').replace(/##/g, '').replace(/#/g, '');
+                elementoDestino.innerHTML = `<div class="parrafos-wrapper escribiendo-cursor">${limpio}</div>`;
+                if (contadorDOM) contadorDOM.innerText = `${contarPalabras(limpio)} palabras`;
+              }
+            } catch (e) { }
+          }
+        }
+        return textoCrudo.replace(/\*\*/g, '').replace(/\*/g, '').replace(/###/g, '').replace(/##/g, '').replace(/#/g, '');
+      } catch (err) {
+        if (err.name === 'AbortError') return ""; // Si el usuario le dio a detener, no es un error
+        throw err; // Lanzamos el error real para que lo atrape la función principal
+      } finally { controladorAbortar = null; }
+    }
+
+    async function solicitarIABackground(prompt) {
+      try {
+        const respuesta = await fetch(`${OLLAMA_URL}/api/generate`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: "qwen3:8b", prompt: prompt, stream: false, options: { temperature: 0.4 } })
+        });
+        if (!respuesta.ok) throw new Error(`Error HTTP ${respuesta.status}. ¿Ollama está encendido?`);
+        const datos = await respuesta.json();
+        return datos.response || "";
+      } catch (err) {
+        throw err; // Lanzamos el error real
+      }
+    }
+
+    function detenerGeneracion() { if (controladorAbortar) controladorAbortar.abort(); }
+    function nuevaNovela() { if (confirm("¿Empezar una novela nueva? Se perderá lo no guardado.")) location.reload(); }
+
+    function guardarNovela() {
+      const tituloActual = document.getElementById('titulo-historia')?.innerText || "";
+      if (!tituloActual || tituloActual === "⏳ Creando...") { alert("Espera a que termine de crear el primer capítulo."); return; }
+      actualizarHistoriaCompleta();
+      const datosNovela = { 
+        titulo: tituloActual, premisa: document.getElementById('texto-historia').value, capitulos: [],
+        secretos: { fichasPersonajes, descripcionLugares, resumenesCapitulos, cronologiaHistoria, listaUniversos, universoActivoNombre }
+      };
+      document.querySelectorAll('.capitulo').forEach(cap => {
+        let contenido = cap.querySelector('.editor-capitulo')?.value || cap.querySelector('.parrafos-wrapper')?.innerText || "";
+        datosNovela.capitulos.push({ titulo: cap.querySelector('.titulo-capitulo').innerText, contenido: contenido.trim() });
+      });
+      const blob = new Blob([JSON.stringify(datosNovela, null, 2)], {type: 'application/json'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${datosNovela.titulo || 'novela'}.json`; a.click();
+    }
+
+    function abrirNovela(event) {
+      const archivo = event.target.files[0]; if (!archivo) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const datos = JSON.parse(e.target.result);
+          document.getElementById('texto-historia').value = datos.premisa || "";
+          document.getElementById('resultado-ia').innerHTML = `<div class="header-novela"><h1 id="titulo-historia" style="display: block;">${datos.titulo || 'Historia'}</h1><div class="menu-info"></div></div><div id="contenedor-capitulos"></div>`;
+          contadorCapitulos = 0;
+          if (datos.secretos) {
+            fichasPersonajes = datos.secretos.fichasPersonajes || "No hay datos.";
+            descripcionLugares = datos.secretos.descripcionLugares || "No hay datos.";
+            resumenesCapitulos = datos.secretos.resumenesCapitulos || [];
+            cronologiaHistoria = datos.secretos.cronologiaHistoria || "No hay datos.";
+            listaUniversos = datos.secretos.listaUniversos || [];
+            universoActivoNombre = datos.secretos.universoActivoNombre || "";
+          }
+          renderSelectorUniverso();
+          actualizarBotonesInfo();
+          if (datos.capitulos) datos.capitulos.forEach(cap => agregarCapitulo(cap.titulo, cap.contenido, true));
+          actualizarHistoriaCompleta();
+        } catch (error) { alert("Error al abrir el archivo."); }
+      };
+      reader.readAsText(archivo); event.target.value = "";
+    }
+
+    function limpiarTitulo(linea) {
+      if (!linea) return ""; let limpio = linea.trim();
+      if (limpio.toLowerCase().includes('[titulo') || limpio.toLowerCase().includes('[contenido')) return "";
+      limpio = limpio.replace(/[\[\]]/g, '').replace(/^cap[ií]tulo\s*\d*\s*[:\.\-]?\s*/i, '');
+      limpio = limpio.replace(/^(el\s+)?titulo\s+(de\s+la\s+novela|del\s+(primer\s+)?capitulo|de\s+la\s+historia)\s*(es|:)?\s*/i, '');
+      limpio = limpio.replace(/^(novela|capitulo)\s*(:)?\s*/i, '').replace(/^[#\*\-]+/, '').trim();
+      if ((limpio.startsWith('"') && limpio.endsWith('"')) || (limpio.startsWith("'") && limpio.endsWith("'"))) limpio = limpio.slice(1, -1).trim();
+      return limpio;
+    }
+
+    function htmlMenuInfo() {
+      return `
+        <div class="menu-info">
+          <button onclick="abrirModalGlobal('Personajes')">👥 Personajes</button>
+          <button onclick="abrirModalGlobal('Lugares')">🗺️ Lugares</button>
+          <button onclick="abrirModalGlobal('Cronologia')">⏳ Cronología</button>
+          <button onclick="abrirModalGlobal('Wiki')" style="background:var(--acento); color:#000;">📚 Wiki</button>
+        </div>
+      `;
+    }
+
+    function actualizarBotonesInfo() {
+      const headerNovela = document.querySelector('.header-novela');
+      if (headerNovela) {
+        let menuInfoDiv = headerNovela.querySelector('.menu-info');
+        if (!menuInfoDiv) { menuInfoDiv = document.createElement('div'); menuInfoDiv.className = 'menu-info'; headerNovela.appendChild(menuInfoDiv); }
+        menuInfoDiv.innerHTML = htmlMenuInfo();
+      }
+    }
+
+    function renderSelectorUniverso() {
+      const select = document.getElementById('selector-universo');
+      select.innerHTML = '<option value="">Sin universo específico</option>';
+      listaUniversos.forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u.nombre; opt.innerText = u.nombre;
+        if (u.nombre === universoActivoNombre) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    function cambiarUniversoActivo(nombre) { universoActivoNombre = nombre; }
+
+    function finalizarCapitulo(capituloDiv, textoGenerado, esPrimerCapitulo) {
+      let lineas = textoGenerado.split('\n').filter(l => l.trim() !== '');
+      let tituloCapituloRaw = "", contenidoFinal = textoGenerado;
+      if (lineas.length > 0 && lineas[0].toLowerCase().includes('eres un novelista')) {
+        const idx = lineas.findIndex(l => l.toLowerCase().startsWith('línea 1') || l.toLowerCase().startsWith('titulo')); if(idx !== -1) lineas.splice(0, idx + 1);
+      }
+      lineas = lineas.filter(l => !l.toLowerCase().startsWith('[contenido') && !l.toLowerCase().startsWith('línea 1'));
+
+      if (esPrimerCapitulo) {
+        let tituloNovela = "Historia Sin Título";
+        if (lineas.length >= 3) { tituloNovela = limpiarTitulo(lineas[0]); tituloCapituloRaw = limpiarTitulo(lineas[1]); contenidoFinal = lineas.slice(2).join('\n\n'); }
+        else if (lineas.length > 0) tituloNovela = limpiarTitulo(lineas[0]);
+        document.getElementById('titulo-historia').innerText = tituloNovela;
+      } else {
+        if (lineas.length >= 2) { tituloCapituloRaw = limpiarTitulo(lineas[0]); contenidoFinal = lineas.slice(1).join('\n\n'); }
+      }
+
+      const todosLosCapitulos = document.querySelectorAll('.capitulo');
+      const numCapitulo = Array.from(todosLosCapitulos).indexOf(capituloDiv) + 1;
+      capituloDiv.querySelector('.titulo-capitulo').innerText = `Capítulo ${numCapitulo}: ${tituloCapituloRaw || "Sin Título"}`;
+      
+      const wrapper = capituloDiv.querySelector('.parrafos-wrapper');
+      const parrafos = contenidoFinal.split('\n').filter(p => p.trim() !== '');
+      wrapper.innerHTML = parrafos.length === 0 ? `<p class="parrafo-ia">${contenidoFinal}</p>` : parrafos.map(p => `<p class="parrafo-ia">${p}</p>`).join('');
+      wrapper.classList.remove('escribiendo-cursor');
+      
+      capituloDiv.querySelector('.contador-palabras').innerText = `${contarPalabras(contenidoFinal)} palabras`;
+      capituloDiv.querySelector('.controles-continuar').innerHTML = `
+        <select class="longitud-capitulo">
+          <option value="400">Corta (400)</option><option value="600" selected>Mediana (600)</option><option value="900">Larga (900)</option>
+          <option value="1200">Extensa (1200)</option><option value="1500">Épica (1500)</option><option value="2000">Ligera (2000)</option><option value="3000">Novela (3000)</option>
+        </select>
+        <button class="btn-icono-cap btn-secreto" onclick="event.stopPropagation(); abrirModalResumen(${numCapitulo})">📝 Resumen</button>
+        <button class="btn-reiniciar-cap" onclick="reiniciarCapitulo(this)">🔁 Reiniciar</button>
+        <button class="btn-continuar-cap" onclick="continuarHistoria(this)">Continuar ▶</button>
+      `;
+      actualizarHistoriaCompleta();
+    }
+
+    function mostrarEstadoIA(mensaje) {
+      let estadoDiv = document.querySelector('.estado-ia');
+      if (!estadoDiv) { estadoDiv = document.createElement('div'); estadoDiv.className = 'estado-ia visible'; const header = document.querySelector('.header-novela'); if(header) header.insertAdjacentElement('afterend', estadoDiv); }
+      estadoDiv.innerHTML = mensaje; estadoDiv.classList.add('visible');
+    }
+    function ocultarEstadoIA() { const e = document.querySelector('.estado-ia'); if(e) e.classList.remove('visible'); }
+
+    function mostrarErrorReal(error) {
+      ocultarEstadoIA();
+      const resultado = document.getElementById('resultado-ia');
+      let mensajeError = error.message || "Error desconocido";
+      // Si es un error de red común en móviles
+      if (error instanceof TypeError && mensajeError.includes('Failed to fetch')) {
+        mensajeError = "Failed to fetch. (El PC se apagó, cambió la IP, o el móvil se quedó sin red)";
+      }
+      resultado.innerHTML = `<p class="vacio" style="color: #ff6a30; text-align: left; padding: 20px;">
+        ❌ <b>Error de Conexión:</b><br>
+        ${mensajeError}<br><br>
+        <b>Posibles soluciones:</b><br>
+        1. Asegúrate de que el PC esté encendido y Ollama abierto.<br>
+        2. Comprueba que la IP en "⚙️ IP IA" sea correcta.<br>
+        3. Si estabas en el móvil, puede que la pantalla se haya apagado y cortado la conexión.<br>
+        4. PC y móvil deben estar en la misma red Wi-Fi (no en redes de invitados).
+      </p>`;
+    }
+
+    async function crearHistoria() {
+      const resultado = document.getElementById('resultado-ia');
+      const textoUsuario = document.getElementById('texto-historia').value;
+      const boton = document.getElementById('btn-crear');
+      if (textoUsuario.trim() === '') { resultado.innerHTML = `<p class="vacio">⚠️ Escribe una idea primero.</p>`; return; }
+
+      const longitudSeleccionada = document.getElementById('longitud-inicial').value;
+      historiaCompleta = textoUsuario; 
+      contadorCapitulos = 0;
+      boton.disabled = true;
+      
+      resultado.innerHTML = `<div class="header-novela"><h1 id="titulo-historia" style="display: block;">⏳ Creando...</h1><div class="menu-info"></div></div><div id="contenedor-capitulos"></div>`;
+      
+      try {
+        mostrarEstadoIA("🧠 <span>Fase 1/3:</span> Diseñando personajes, lugares y relaciones...");
+        const descUniv = obtenerDescripcionUniversoActivo();
+        const reglasUniverso = descUniv ? `\nREGLA DE UNIVERSO: Toda la historia ocurre en este universo. Crea personajes y lugares que encajen estrictamente en él:\n${descUniv}\n---\n` : '';
+
+        const promptSecretos = `Eres un creador de mundos. ${reglasUniverso} Basado en esta idea: "${textoUsuario}", crea la base de datos para el escritor.
+        Crea fichas detalladas para los personajes (nombre, edad, gustos, disgustos, altura, peso, personalidad, forma de hablar, forma de actuar, vestimenta, backstory y relaciones).
+        Crea descripciones detalladas de los lugares (nombre, forma, tamaño, objetos que hay, descripción general).
+        Separa CADA ficha de personaje con una línea que contenga exactamente tres signos de igual (===). Haz lo mismo con los lugares.
+        Devuelve EXACTAMENTE con este formato de etiquetas, sin usar Markdown:
+        [INICIO_PERSONAJES]
+        (fichas aquí separadas por ===)
+        [FIN_PERSONAJES]
+        [INICIO_LUGARES]
+        (lugares aquí separadas por ===)
+        [FIN_LUGARES]`;
+        
+        const txtSecreto = await solicitarIABackground(promptSecretos);
+        fichasPersonajes = extraerSeccion(txtSecreto, "[INICIO_PERSONAJES]", "[FIN_PERSONAJES]") || "Error al crear personajes.";
+        descripcionLugares = extraerSeccion(txtSecreto, "[INICIO_LUGARES]", "[FIN_LUGARES]") || "Error al crear lugares.";
+        actualizarBotonesInfo();
+
+        mostrarEstadoIA("✍️ <span>Fase 2/3:</span> Escribiendo el capítulo usando la base de datos...");
+        agregarCapitulo("⏳ Creando capítulo...", "", false, true);
+        const capituloDiv = document.querySelector('.capitulo');
+        capituloDiv.querySelector('.controles-continuar').innerHTML = `<button class="btn-continuar-cap btn-detener" onclick="detenerGeneracion()">🛑 Detener</button>`;
+        
+        let promptCapitulo = `Eres un novelista experto. Escribe el primer capítulo.
+        ${reglasUniverso}
+        Usa esta información secretamente:
+        PERSONAJES: ${fichasPersonajes}
+        LUGARES: ${descripcionLugares}
+        
+        NO repitas instrucciones, no uses corchetes, no uses Markdown ni mayúsculas en cada palabra.
+        FORMATO: Línea 1 (Título novela), Línea 2 (Título capítulo, SOLO el nombre), Línea 3+ (Contenido, párrafos cortos).
+        REGLA CRÍTICA: Escribe el título SOLO en la primera línea. Prohibido volver a escribir el título de la novela o del capítulo en medio del texto.
+        LONGITUD: Mínimo ${longitudSeleccionada} palabras.
+        ESTRUCTURA: Inicio, Desarrollo, Cliffhanger. Avanza la historia, no repitas escenas. Si te trabas, introduce un giro.
+        Idea base: "${textoUsuario}"`;
+        
+        capituloDiv.dataset.prompt = promptCapitulo;
+        const wrapper = capituloDiv.querySelector('.parrafos-wrapper');
+        const contadorDOM = capituloDiv.querySelector('.contador-palabras');
+        const textoGenerado = await solicitarIAStreaming(promptCapitulo, wrapper, contadorDOM);
+        finalizarCapitulo(capituloDiv, textoGenerado, true);
+        actualizarHistoriaCompleta();
+
+        mostrarEstadoIA("📝 <span>Fase 3/3:</span> Actualizando memoria, resumen y cronología...");
+        await actualizarMemoriaSecreta(textoGenerado, 1);
+
+      } catch (error) {
+        console.error("Error detallado:", error);
+        mostrarErrorReal(error);
+      } finally { ocultarEstadoIA(); boton.disabled = false; }
+    }
+
+    async function continuarHistoria(botonClickeado) {
+      const controlesContinuar = botonClickeado.parentElement;
+      const footer = controlesContinuar.parentElement;
+      const inputInstruccion = footer.querySelector('.input-continuar').value;
+      const longitudSeleccionada = controlesContinuar.querySelector('select').value;
+      
+      footer.remove(); 
+      actualizarHistoriaCompleta();
+
+      try {
+        mostrarEstadoIA("✍️ <span>Fase 1/2:</span> Escribiendo nuevo capítulo usando la memoria...");
+        agregarCapitulo("⏳ Creando capítulo...", "", false, true);
+        const capituloDiv = document.querySelector('.capitulo:last-child');
+        capituloDiv.querySelector('.controles-continuar').innerHTML = `<button class="btn-continuar-cap btn-detener" onclick="detenerGeneracion()">🛑 Detener</button>`;
+
+        const descUniv = obtenerDescripcionUniversoActivo();
+        const reglasUniverso = descUniv ? `\nREGLA DE UNIVERSO: La historia ocurre en este universo. Mantén sus reglas en todo momento:\n${descUniv}\n---\n` : '';
+
+        let promptCapitulo = `Eres un novelista experto. ${reglasUniverso} Continúa la historia con el SIGUIENTE capítulo.
+        Usa esta información secretamente:
+        PERSONAJES ACTUALES: ${fichasPersonajes}
+        LUGARES ACTUALES: ${descripcionLugares}
+        CRONOLOGÍA: ${cronologiaHistoria}
+        RESÚMENES ANTERIORES: ${resumenesCapitulos.join(' | ')}
+        ---
+        REGLA DE CONSISTENCIA: Lee atentamente los resúmenes anteriores y la cronología. Prohibido contradecir eventos pasados (ej: si un personaje murió no puede aparecer vivo; si es de noche no digas que sale el sol; si están en una mazmorra no aparezcan de golpe en un bosque). La historia debe fluir lógicamente.
+        NO repitas instrucciones, no uses corchetes, no uses Markdown ni mayúsculas en cada palabra.
+        FORMATO: Línea 1 (Título capítulo, SOLO el nombre), Línea 2+ (Contenido, párrafos cortos).
+        REGLA CRÍTICA: Escribe el título SOLO en la primera línea. Prohibido volver a escribir el título en medio del texto.
+        LONGITUD: Mínimo ${longitudSeleccionada} palabras. Mejor de más que de menos.
+        ESTRUCTURA: Inicio, Desarrollo, Cliffhanger. Si te trabas, introduce un giro narrativo.`;
+
+        if (inputInstruccion.trim() !== '') promptCapitulo += `\nEl usuario quiere que ocurra: "${inputInstruccion}"`;
+
+        capituloDiv.dataset.prompt = promptCapitulo;
+        const wrapper = capituloDiv.querySelector('.parrafos-wrapper');
+        const contadorDOM = capituloDiv.querySelector('.contador-palabras');
+        const textoGenerado = await solicitarIAStreaming(promptCapitulo, wrapper, contadorDOM);
+        
+        const todosCaps = document.querySelectorAll('.capitulo');
+        const numCap = Array.from(todosCaps).indexOf(capituloDiv) + 1;
+        
+        finalizarCapitulo(capituloDiv, textoGenerado, false);
+        actualizarHistoriaCompleta();
+
+        mostrarEstadoIA("📝 <span>Fase 2/2:</span> Actualizando fichas, lugares, resumen...");
+        await actualizarMemoriaSecreta(textoGenerado, numCap);
+
+      } catch (error) { 
+        console.error("Error al continuar:", error); 
+        mostrarErrorReal(error);
+      } finally { ocultarEstadoIA(); }
+    }
+
+    async function actualizarMemoriaSecreta(textoCapitulo, numCapitulo) {
+      const promptActualizacion = `Eres un archivero literario. Acabas de escribir el Capítulo ${numCapitulo}.
+      Texto del capítulo:
+      ${textoCapitulo}
+      ---
+      Estado actual de PERSONAJES:
+      ${fichasPersonajes}
+      ---
+      Estado actual de LUGARES:
+      ${descripcionLugares}
+      ---
+      Cronología actual:
+      ${cronologiaHistoria}
+      ---
+      Tu tarea: Actualiza TODO basándote en el capítulo. 
+      Separa CADA ficha de personaje con una línea que contenga exactamente tres signos de igual (===). Haz lo mismo con los lugares.
+      Devuelve EXCLUSIVAMENTE el texto usando estas etiquetas exactas, sin usar Markdown:
+      [INICIO_PERSONAJES]
+      (Fichas de personajes actualizadas y nuevas separadas por ===)
+      [FIN_PERSONAJES]
+      [INICIO_LUGARES]
+      (Descripciones de lugares actualizadas y nuevos separadas por ===)
+      [FIN_LUGARES]
+      [INICIO_RESUMEN]
+      (Un resumen MUY CORTO Y DETALLADO de lo que pasó en este capítulo ${numCapitulo})
+      [FIN_RESUMEN]
+      [INICIO_CRONOLOGIA]
+      (La lista completa de eventos cronológicos hasta ahora)
+      [FIN_CRONOLOGIA]`;
+
+      const textoRespuesta = await solicitarIABackground(promptActualizacion);
+      
+      const nuevosPersonajes = extraerSeccion(textoRespuesta, "[INICIO_PERSONAJES]", "[FIN_PERSONAJES]");
+      if (nuevosPersonajes) fichasPersonajes = nuevosPersonajes;
+      const nuevosLugares = extraerSeccion(textoRespuesta, "[INICIO_LUGARES]", "[FIN_LUGARES]");
+      if (nuevosLugares) descripcionLugares = nuevosLugares;
+      const resumen = extraerSeccion(textoRespuesta, "[INICIO_RESUMEN]", "[FIN_RESUMEN]");
+      if (resumen) resumenesCapitulos[numCapitulo - 1] = resumen;
+      const cronologia = extraerSeccion(textoRespuesta, "[INICIO_CRONOLOGIA]", "[FIN_CRONOLOGIA]");
+      if (cronologia) cronologiaHistoria = cronologia;
+      
+      actualizarBotonesInfo();
+    }
+
+    function agregarCapitulo(titulo, contenido, saltarIA = false, esStreaming = false) {
+      contadorCapitulos++;
+      const contenedor = document.getElementById('contenedor-capitulos');
+      const divCapitulo = document.createElement('div');
+      divCapitulo.className = 'capitulo';
+      
+      let htmlParrafos = esStreaming ? `<div class="parrafos-wrapper"></div>` : `<div class="parrafos-wrapper">${contenido.split('\n').filter(p=>p.trim()!=='').map(p=>`<p class="parrafo-ia">${p}</p>`).join('')}</div>`;
+
+      divCapitulo.innerHTML = `
+        <div class="capitulo-header" onclick="toggleMinimizar(this)">
+          <div class="capitulo-header-left"><span class="toggle-icono">▼</span><span class="titulo-capitulo">${titulo}</span></div>
+          <div class="capitulo-acciones">
+            <span class="contador-palabras">${contarPalabras(contenido)} palabras</span>
+            <button class="btn-icono-cap btn-secreto" onclick="event.stopPropagation(); abrirModalResumen(${contadorCapitulos})">📝 Resumen</button>
+            <button class="btn-icono-cap" onclick="event.stopPropagation(); toggleEditarCapitulo(this)">✏️ Editar</button>
+          </div>
+        </div>
+        <div class="capitulo-body">
+          ${htmlParrafos}
+          <div class="footer-capitulo">
+            <label>📝 ¿Qué quieres que pase ahora? (Opcional)</label>
+            <textarea class="input-continuar" placeholder="Ej: El protagonista encuentra una nota..."></textarea>
+            <div class="controles-continuar">
+              <select class="longitud-capitulo"><option value="400">Corta (400)</option><option value="600" selected>Mediana (600)</option><option value="900">Larga (900)</option><option value="1200">Extensa (1200)</option><option value="1500">Épica (1500)</option><option value="2000">Ligera (2000)</option><option value="3000">Novela (3000)</option></select>
+              <button class="btn-continuar-cap" onclick="continuarHistoria(this)">Continuar ▶</button>
+            </div>
+          </div>
+        </div>`;
+      contenedor.appendChild(divCapitulo);
+      if (!saltarIA) { actualizarHistoriaCompleta(); document.getElementById('resultado-ia').scrollTop = 999999; }
+    }
+
+    function reiniciarCapitulo(botonClickeado) {
+      const capituloDiv = botonClickeado.closest('.capitulo');
+      const promptGuardado = capituloDiv.dataset.prompt; if (!promptGuardado) return;
+      capituloDiv.querySelector('.titulo-capitulo').innerText = "⏳ Recreando...";
+      const wrapper = capituloDiv.querySelector('.parrafos-wrapper'); const contadorDOM = capituloDiv.querySelector('.contador-palabras');
+      wrapper.innerHTML = ''; contadorDOM.innerText = '0 palabras';
+      capituloDiv.querySelector('.controles-continuar').innerHTML = `<button class="btn-continuar-cap btn-detener" onclick="detenerGeneracion()">🛑 Detener</button>`;
+      (async () => { try { const t = await solicitarIAStreaming(promptGuardado, wrapper, contadorDOM); finalizarCapitulo(capituloDiv, t, document.querySelectorAll('.capitulo')[0] === capituloDiv); } catch (e) { mostrarErrorReal(e); } })();
+    }
+
+    function toggleMinimizar(headerElemento) { headerElemento.parentElement.classList.toggle('minimizado'); }
+    function toggleEditarCapitulo(botonEditar) {
+      const capitulo = botonEditar.closest('.capitulo');
+      const wrapper = capitulo.querySelector('.parrafos-wrapper');
+      const btnGuardar = capitulo.querySelector('.btn-continuar-cap');
+      const contadorDOM = capitulo.querySelector('.contador-palabras');
+      if (botonEditar.innerText.includes('Editar')) {
+        wrapper.innerHTML = `<textarea class="editor-capitulo" style="min-height: 200px; width: 100%; margin-bottom: 16px;">${wrapper.innerText}</textarea>`;
+        botonEditar.innerText = '💾'; if (btnGuardar) btnGuardar.disabled = true;
+        wrapper.querySelector('textarea').addEventListener('input', function() { contadorDOM.innerText = `${contarPalabras(this.value)} palabras`; });
+      } else {
+        const textoEditado = wrapper.querySelector('textarea').value;
+        wrapper.innerHTML = textoEditado.split('\n').filter(p=>p.trim()!=='').map(p=>`<p class="parrafo-ia">${p}</p>`).join('') || `<p class="parrafo-ia">${textoEditado}</p>`;
+        botonEditar.innerText = '✏️'; if (btnGuardar) btnGuardar.disabled = false;
+        actualizarHistoriaCompleta(); contadorDOM.innerText = `${contarPalabras(wrapper.innerText)} palabras`;
+      }
+    }
+    function actualizarHistoriaCompleta() {
+      let texto = document.getElementById('texto-historia').value + "\n\n";
+      document.querySelectorAll('.capitulo').forEach(cap => {
+        texto += `Capítulo: ${cap.querySelector('.titulo-capitulo').innerText}\n${cap.querySelector('.editor-capitulo')?.value || cap.querySelector('.parrafos-wrapper')?.innerText || ""}\n\n`;
+      });
+      historiaCompleta = texto;
+    }
+
+    // SISTEMA MODAL, WIKI Y BÚSQUEDA
+    function abrirModal(titulo, contenido) {
+      document.getElementById('modal-titulo').innerText = titulo;
+      document.getElementById('modal-contenido').innerText = contenido;
+      document.getElementById('modal-contenido').style.display = 'block';
+      document.getElementById('modal-cards').innerHTML = ''; 
+      document.getElementById('modal-acciones').innerHTML = '';
+      document.getElementById('modal-fondo').style.display = 'flex';
+    }
+    function cerrarModal() { document.getElementById('modal-fondo').style.display = 'none'; }
+
+    function abrirModalGlobal(tipo) {
+      const tituloEl = document.getElementById('modal-titulo');
+      const contEl = document.getElementById('modal-contenido');
+      const cardsEl = document.getElementById('modal-cards');
+      const accionEl = document.getElementById('modal-acciones');
+      
+      cardsEl.innerHTML = ''; 
+      contEl.style.display = 'none';
+      contEl.innerHTML = ''; 
+      
+      if (tipo === 'Personajes' || tipo === 'Lugares') {
+        tituloEl.innerText = tipo === 'Personajes' ? '👥 Personajes y Relaciones (Editables)' : '🗺️ Lugares (Editables)';
+        let textoBase = tipo === 'Personajes' ? fichasPersonajes : descripcionLugares;
+        let items = textoBase.split(/\n={3,}\n|\n===\n|===/).map(s => s.trim()).filter(s => s.length > 0);
+        if (items.length === 0 && textoBase.trim() !== "") items = [textoBase]; 
+        items.forEach(item => { cardsEl.appendChild(crearFichaMemoria(item)); });
+        accionEl.innerHTML = `
+          <button class="btn-modal" onclick="anadirFichaMemoria('${tipo}')">➕ Añadir ${tipo === 'Personajes' ? 'Personaje' : 'Lugar'}</button>
+          <button class="btn-modal btn-modal-guardar" onclick="guardarCambiosMemoria('${tipo}')">💾 Guardar Cambios</button>
+        `;
+      } else if (tipo === 'Cronologia') {
+        tituloEl.innerText = '⏳ Cronología';
+        contEl.style.display = 'block'; contEl.innerText = cronologiaHistoria;
+      } else if (tipo === 'Universos') {
+        tituloEl.innerText = '🌌 Gestión de Universos';
+        listaUniversos.forEach(u => { cardsEl.appendChild(crearFichaUniverso(u.nombre, u.descripcion, u.nombre === universoActivoNombre)); });
+        accionEl.innerHTML = `
+          <button class="btn-modal" onclick="anadirFichaUniverso()">➕ Añadir Universo</button>
+          <button class="btn-modal btn-modal-guardar" onclick="guardarUniversos()">💾 Guardar y Cerrar</button>
+        `;
+      } else if (tipo === 'Wiki') {
+        tituloEl.innerText = '📚 Wiki Automática de la Novela';
+        let wikiHTML = `<input type="text" id="wiki-search" placeholder="🔎 Buscar eventos, nombres, lugares..." oninput="filtrarWiki()">`;
+        wikiHTML += `<div id="wiki-body">`;
+        
+        const descUniv = obtenerDescripcionUniversoActivo();
+        if (descUniv) wikiHTML += `<div class="wiki-seccion"><h3>🌌 Universo Activo</h3><div class="wiki-item">${descUniv}</div></div>`;
+        
+        wikiHTML += `<div class="wiki-seccion"><h3>👥 Personajes</h3>`;
+        fichasPersonajes.split('===').filter(s=>s.trim()).forEach(p => wikiHTML += `<div class="wiki-item">${p.trim()}</div>`);
+        wikiHTML += `</div>`;
+
+        wikiHTML += `<div class="wiki-seccion"><h3>🗺️ Lugares</h3>`;
+        descripcionLugares.split('===').filter(s=>s.trim()).forEach(p => wikiHTML += `<div class="wiki-item">${p.trim()}</div>`);
+        wikiHTML += `</div>`;
+
+        wikiHTML += `<div class="wiki-seccion"><h3>⏳ Cronología</h3><div class="wiki-item">${cronologiaHistoria}</div></div>`;
+        
+        wikiHTML += `<div class="wiki-seccion"><h3>📝 Resúmenes de Capítulos</h3>`;
+        resumenesCapitulos.forEach((r, i) => wikiHTML += `<div class="wiki-item"><b>Capítulo ${i+1}:</b> ${r}</div>`);
+        wikiHTML += `</div></div>`;
+
+        contEl.innerHTML = wikiHTML;
+        contEl.style.display = 'block';
+        contEl.style.whiteSpace = 'normal';
+      }
+      document.getElementById('modal-fondo').style.display = 'flex';
+    }
+
+    function filtrarWiki() {
+      const q = document.getElementById('wiki-search').value.toLowerCase();
+      const items = document.querySelectorAll('#wiki-body .wiki-item');
+      items.forEach(item => {
+        if (item.innerText.toLowerCase().includes(q)) {
+          item.style.display = 'block';
+          let txt = item.innerText;
+          let regex = new RegExp(`(${q})`, "gi");
+          item.innerHTML = txt.replace(regex, '<span class="wiki-item-mark">$1</span>');
+        } else {
+          item.style.display = 'none';
+        }
+      });
+      document.querySelectorAll('#wiki-body .wiki-seccion').forEach(sec => {
+        let visibles = sec.querySelectorAll('.wiki-item:not([style*="display: none"])');
+        sec.style.display = visibles.length > 0 ? 'block' : 'none';
+      });
+    }
+
+    function crearFichaMemoria(texto) {
+      const card = document.createElement('div');
+      card.className = 'ficha-memoria';
+      let tituloFicha = texto.split('\n')[0].trim();
+      if (tituloFicha.length > 40) tituloFicha = tituloFicha.substring(0, 40) + '...';
+      if (!tituloFicha) tituloFicha = 'Nueva Ficha';
+      tituloFicha = tituloFicha.replace(/^(nombre|titulo|lugar|personaje)\s*:\s*/i, '');
+      card.innerHTML = `
+        <div class="ficha-header" onclick="toggleFichaMemoria(this)">
+          <div class="ficha-header-left"><span class="ficha-toggle">▼</span><span class="ficha-titulo">${tituloFicha}</span></div>
+          <button class="btn-eliminar-ficha" onclick="event.stopPropagation(); this.closest('.ficha-memoria').remove()">🗑️</button>
+        </div>
+        <div class="ficha-body"><textarea>${texto}</textarea></div>
+      `;
+      return card;
+    }
+
+    function crearFichaUniverso(nombre, desc, esActivo) {
+      const card = document.createElement('div');
+      card.className = 'ficha-memoria';
+      if (esActivo) card.style.borderColor = 'var(--acento)';
+      card.innerHTML = `
+        <div class="ficha-header" onclick="toggleFichaMemoria(this)">
+          <div class="ficha-header-left"><span class="ficha-toggle">▼</span>
+            <input type="text" class="ficha-titulo-input" value="${nombre.replace(/"/g, '&quot;')}" placeholder="Nombre del Universo" onclick="event.stopPropagation()" ${esActivo ? 'style="color: var(--acento)"' : ''}>
+          </div>
+          <div>
+            <button class="btn-activar-universo" onclick="event.stopPropagation(); activarUniverso(this)" style="${esActivo ? 'background:var(--acento);color:#000;border-color:var(--acento)' : ''}">${esActivo ? '✔️ Activo' : 'Activar'}</button>
+            <button class="btn-eliminar-ficha" onclick="event.stopPropagation(); this.closest('.ficha-memoria').remove()">🗑️</button>
+          </div>
+        </div>
+        <div class="ficha-body"><textarea placeholder="Describe las reglas de este universo...">${desc}</textarea></div>
+      `;
+      return card;
+    }
+
+    function activarUniverso(btn) {
+      document.querySelectorAll('#modal-cards .ficha-memoria').forEach(card => {
+        const b = card.querySelector('.btn-activar-universo'); b.innerText = 'Activar';
+        b.style.background = 'var(--bg-input)'; b.style.color = 'var(--texto-secundario)'; b.style.borderColor = 'var(--borde)';
+        card.style.borderColor = 'var(--borde)'; card.querySelector('.ficha-titulo-input').style.color = 'var(--texto)';
+      });
+      const card = btn.closest('.ficha-memoria');
+      btn.innerText = '✔️ Activo'; btn.style.background = 'var(--acento)'; btn.style.color = '#000'; btn.style.borderColor = 'var(--acento)';
+      card.style.borderColor = 'var(--acento)'; card.querySelector('.ficha-titulo-input').style.color = 'var(--acento)';
+    }
+
+    function anadirFichaUniverso() {
+      const cardsEl = document.getElementById('modal-cards');
+      const nuevaCard = crearFichaUniverso("", "", false);
+      cardsEl.appendChild(nuevaCard); nuevaCard.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+
+    function guardarUniversos() {
+      const cardsEl = document.getElementById('modal-cards');
+      const cards = cardsEl.querySelectorAll('.ficha-memoria');
+      let nuevosUniversos = []; let activoGuardado = "";
+      cards.forEach(card => {
+        const nombreInput = card.querySelector('.ficha-titulo-input').value.trim();
+        const descTextarea = card.querySelector('.ficha-body textarea').value.trim();
+        const esActivo = card.querySelector('.btn-activar-universo').innerText.includes('Activo');
+        if (nombreInput) {
+          nuevosUniversos.push({ nombre: nombreInput, descripcion: descTextarea });
+          if (esActivo) activoGuardado = nombreInput;
+        }
+      });
+      listaUniversos = nuevosUniversos; universoActivoNombre = activoGuardado;
+      renderSelectorUniverso(); cerrarModal();
+    }
+
+    function toggleFichaMemoria(headerEl) { headerEl.parentElement.classList.toggle('minimizado'); }
+    function anadirFichaMemoria(tipo) {
+      const cardsEl = document.getElementById('modal-cards');
+      let plantilla = tipo === 'Personajes' ? `Nombre: \nEdad: \nGustos: \nDisgustos: \nAltura: \nPeso: \nPersonalidad: \nForma de hablar: \nForma de actuar: \nVestimenta: \nBackstory: \nRelaciones: ` : `Nombre: \nForma: \nTamaño: \nObjetos que hay: \nDescripción general: `;
+      const nuevaCard = crearFichaMemoria(plantilla);
+      cardsEl.appendChild(nuevaCard); novaCard.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+
+    function guardarCambiosMemoria(tipo) {
+      const cardsEl = document.getElementById('modal-cards');
+      const textareas = cardsEl.querySelectorAll('.ficha-body textarea');
+      let nuevoTexto = [];
+      textareas.forEach(ta => { let val = ta.value.trim(); if (val !== '') { val = val.replace(/={3,}/g, '-'); nuevoTexto.push(val); } });
+      const textoFinal = nuevoTexto.join('\n===\n'); 
+      if (tipo === 'Personajes') fichasPersonajes = textoFinal || "No hay personajes.";
+      else if (tipo === 'Lugares') descripcionLugares = textoFinal || "No hay lugares.";
+      cerrarModal();
+    }
+
+    function abrirModalResumen(numCap) { abrirModal(`📝 Resumen Capítulo ${numCap}`, resumenesCapitulos[numCap-1] || 'Aún no procesado.'); }
+
+    // LÓGICA DE MENÚ CONTEXTUAL (CLIC DERECHO Y MANTENER PULSADO EN MÓVIL)
+    const resultadoIA = document.getElementById('resultado-ia');
+    
+    resultadoIA.addEventListener('contextmenu', function(e) {
+      if (e.target.classList.contains('parrafo-ia')) {
+        e.preventDefault(); parrafoActivo = e.target; 
+        const menu = document.getElementById('menu-contextual'); 
+        menu.style.display = 'flex'; 
+        menu.style.top = e.clientY + 'px'; 
+        menu.style.left = (e.clientX - 100) + 'px'; 
+      }
+    });
+
+    let touchTimer = null;
+    resultadoIA.addEventListener('touchstart', function(e) {
+      if (e.target.classList.contains('parrafo-ia')) {
+        const target = e.target;
+        const touch = e.touches[0];
+        touchTimer = setTimeout(() => {
+          parrafoActivo = target;
+          const menu = document.getElementById('menu-contextual');
+          menu.style.display = 'flex';
+          menu.style.top = (touch.clientY - 50) + 'px'; 
+          menu.style.left = (touch.clientX - 100) + 'px';
+          e.preventDefault();
+        }, 500); 
+      }
+    }, { passive: false });
+
+    resultadoIA.addEventListener('touchend', function() { clearTimeout(touchTimer); });
+    resultadoIA.addEventListener('touchmove', function() { clearTimeout(touchTimer); }); 
+
+    document.addEventListener('click', function(e) {
+      const menu = document.getElementById('menu-contextual'); 
+      if (!menu.contains(e.target)) menu.style.display = 'none';
+    });
+
+    async function ejecutarAccionMenu(accion) {
+      const menu = document.getElementById('menu-contextual'); menu.style.display = 'none';
+      if (!parrafoActivo) return; actualizarHistoriaCompleta();
+      const parrafoTexto = parrafoActivo.innerText;
+      parrafoActivo.innerHTML = `<span class="procesando">🧠 Procesando (${accion})...</span>`;
+      
+      let textoPrompt = ''; 
+      let inputUsuario = '';
+
+      if (accion === 'Reescribir') {
+        inputUsuario = window.prompt("¿Cómo quieres reescribir este párrafo?\n(Ej: Hazlo más corto, cámbialo a primera persona, añade más suspenso)");
+        if (inputUsuario === null) { parrafoActivo.innerText = parrafoTexto; return; }
+        textoPrompt = `Contexto de la historia: "${historiaCompleta}". Reescribe el siguiente párrafo siguiendo ESTRICTAMENTE estas instrucciones del usuario: "${inputUsuario}". No añadas explicaciones, responde SOLO con el párrafo reescrito. Párrafo original: "${parrafoTexto}"`;
+      } 
+      else if (accion === 'Tono') {
+        inputUsuario = window.prompt("Escribe el tono o estilo que quieres aplicar:\n(Ej: Misterioso, Cómico, Épico, Melancólico)");
+        if (inputUsuario === null || inputUsuario.trim() === '') { parrafoActivo.innerText = parrafoTexto; return; }
+        textoPrompt = `Reescribe el siguiente párrafo usando un tono "${inputUsuario}". No añadas explicaciones, responde SOLO con el párrafo reescrito. Párrafo original: "${parrafoTexto}"`;
+      } 
+      else if (accion === 'Expandir') {
+        textoPrompt = `Contexto: "${historiaCompleta}". Expande este párrafo. Sin markdown. Párrafo: "${parrafoTexto}"`;
+      } 
+      else if (accion === 'Corregir') {
+        textoPrompt = `Corrige la ortografía y gramática de este párrafo. Mantén el sentido original. No añadas explicaciones, responde solo con el párrafo corregido. Párrafo: "${parrafoTexto}"`;
+      } 
+      else if (accion === 'Dialogo') {
+        textoPrompt = `Reescribe el siguiente párrafo convirtiéndolo en un diálogo directo entre los personajes. Hazlo más corto, dinámico y con sentido. Usa guiones (-) para hablar. Párrafo: "${parrafoTexto}"`;
+      } 
+      else if (accion === 'Incongruencia') {
+        textoPrompt = `Eres un editor literario silencioso. Revisa el siguiente párrafo en busca de incongruencias con la base de datos de la historia. Si hay errores, reescríbelo para que tenga sentido. Si está bien, devuelve el párrafo original exacto. PROHIBIDO dar explicaciones. PROHIBIDO decir si encontraste o no errores. Responde SOLO con el texto del párrafo, nada más. Párrafo: "${parrafoTexto}". WIKI: Personajes: ${fichasPersonajes}. Lugares: ${descripcionLugares}. Cronología: ${cronologiaHistoria}.`;
+      }
+
+      try {
+        const capituloPadre = parrafoActivo.closest('.capitulo'); const contadorDOM = capituloPadre.querySelector('.contador-palabras');
+        const textoGenerado = await solicitarIAStreaming(textoPrompt, parrafoActivo, null);
+        parrafoActivo.innerText = textoGenerado.trim();
+        const wrapper = capituloPadre.querySelector('.parrafos-wrapper'); if (wrapper && contadorDOM) contadorDOM.innerText = `${contarPalabras(wrapper.innerText)} palabras`;
+        actualizarHistoriaCompleta();
+      } catch (e) { 
+        mostrarErrorReal(e); 
+      }
+      parrafoActivo = null;
+    }
+  </script>
+</body>
+</html>
